@@ -36,7 +36,7 @@
   footer { color: var(--muted); font-size: 13px; text-align: center; margin-top: 24px; }
 </style>
 </head>
-<body>
+<body data-students="">
 <header><h1 id="sem">Розклад занять</h1><small id="upd"></small></header>
 <main>
   <select id="semPick" hidden></select>
@@ -60,6 +60,7 @@ const store = {
 };
 const st = { who: store.get('who') || 'platoon', id: store.get('id'), period: store.get('period') || 'week', sem: store.get('sem') };
 let D = null, ALL = [];
+if (document.body.dataset.students === '1') { st.who = 'platoon'; document.getElementById('who').style.display = 'none'; }  // сторінка для студентів
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
