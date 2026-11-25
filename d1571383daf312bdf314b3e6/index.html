@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<title>Розклад - Практичні заняття</title>
+<title>Розклад - КВП</title>
 <style>
   :root { --bg: #f4f6f8; --card: #fff; --text: #1f2937; --muted: #6b7280; --line: #e5e7eb; --accent: #1d4ed8; --changed: #c2410c; --changedbg: #fff7ed; }
   @media (prefers-color-scheme: dark) {
@@ -20,6 +20,7 @@
   .tabs { display: flex; gap: 6px; margin: 8px 0; }
   .tabs button { flex: 1; padding: 10px 6px; border: 1px solid var(--line); background: var(--card); color: var(--text); border-radius: 8px; font-size: 15px; }
   .tabs button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  #semPick { margin-bottom: 4px; font-weight: 600; }
   select { width: 100%; padding: 10px; font-size: 16px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--text); }
   h2 { font-size: 15px; margin: 18px 0 6px; color: var(--muted); text-transform: capitalize; }
   .lesson { background: var(--card); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; border-left: 4px solid var(--accent); }
@@ -38,6 +39,7 @@
 <body>
 <header><h1 id="sem">Розклад занять</h1><small id="upd"></small></header>
 <main>
+  <select id="semPick" hidden></select>
   <div class="tabs" id="who">
     <button data-v="platoon">Мій взвод</button><button data-v="teacher">Я викладач</button>
   </div>
@@ -56,8 +58,8 @@ const store = {
   get(k) { try { return localStorage.getItem(k) } catch (e) { return null } },
   set(k, v) { try { localStorage.setItem(k, v) } catch (e) { /* без збереження */ } },
 };
-const st = { who: store.get('who') || 'platoon', id: store.get('id'), period: store.get('period') || 'week' };
-let D = null;
+const st = { who: store.get('who') || 'platoon', id: store.get('id'), period: store.get('period') || 'week', sem: store.get('sem') };
+let D = null, ALL = [];
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -112,12 +114,23 @@ function render() {
 document.getElementById('who').onclick = (e) => { if (e.target.dataset.v) { st.who = e.target.dataset.v; st.id = null; store.set('who', st.who); render(); } };
 document.getElementById('period').onclick = (e) => { if (e.target.dataset.v) { st.period = e.target.dataset.v; store.set('period', st.period); render(); } };
 $('pick').onchange = (e) => { st.id = e.target.value; store.set('id', st.id); render(); };
+$('semPick').onchange = (e) => { st.sem = e.target.value; store.set('sem', st.sem); useSem(); };
+
+function useSem() {
+  // запамʼятований семестр, інакше той, що йде сьогодні, інакше найближчий за датою
+  const t0 = iso(new Date());
+  D = ALL.find((s) => String(s.semester.id) === String(st.sem)) || ALL.find((s) => s.semester.start <= t0 && t0 <= s.semester.end)
+    || ALL.filter((s) => s.semester.start > t0)[0] || ALL.at(-1);
+  $('semPick').innerHTML = ALL.map((s) => `<option value="${s.semester.id}"${s === D ? ' selected' : ''}>${esc(s.semester.name)}</option>`).join('');
+  $('semPick').hidden = ALL.length < 2;
+  $('sem').textContent = 'Розклад занять - ' + D.semester.name;
+  render();
+}
 
 fetch('data.json', { cache: 'no-cache' }).then((r) => r.json()).then((d) => {
-  D = d;
-  $('sem').textContent = 'Розклад занять - ' + d.semester.name;
+  ALL = d.semesters || [d];
   $('upd').textContent = d.updated ? 'Оновлено ' + d.updated.slice(8, 10) + '.' + d.updated.slice(5, 7) + '.' + d.updated.slice(0, 4) + ' ' + d.updated.slice(11, 16) : '';
-  render();
+  useSem();
 }).catch(() => { $('list').innerHTML = '<p class="empty">Не вдалося завантажити розклад. Перевірте інтернет і оновіть сторінку.</p>'; });
 </script>
 </body>
